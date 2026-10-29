@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Le Protocole Publisher</title>
+<style>
+:root{--bg:#f6f6f8;--card:#fff;--ink:#16161a;--mute:#6b6b76;--line:#e3e3ea;--accent:#fe2c55;--ok:#0a8f5a;--warn:#b25b00}
+@media (prefers-color-scheme:dark){:root{--bg:#111114;--card:#1b1b20;--ink:#f1f1f4;--mute:#a0a0ab;--line:#2c2c34}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{font-size:1.1em;margin:0;flex:1}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.creator{display:flex;align-items:center;gap:10px}
+.creator img{width:40px;height:40px;border-radius:50%}
+button{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:260px 1fr;gap:16px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.eps button{display:block;width:100%;text-align:left;margin-bottom:6px}
+.eps button.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.editor{display:grid;grid-template-columns:200px 1fr;gap:16px}
+@media (max-width:560px){.editor{grid-template-columns:1fr}}
+video{width:100%;border-radius:10px;background:#000;aspect-ratio:9/16}
+label{display:block;font-weight:600;margin:12px 0 4px}
+textarea,select,input[type=datetime-local],input[type=password],input[type=url]{width:100%;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{min-height:190px}
+.check{display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0}
+.small{font-size:.86em;color:var(--mute)}
+.msg{padding:10px;border-radius:8px;margin-top:10px}
+.msg.ok{background:rgba(10,143,90,.12);color:var(--ok)}
+.msg.err{background:rgba(254,44,85,.12);color:var(--accent)}
+.msg.warn{background:rgba(178,91,0,.12);color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:.9em}
+td{padding:6px 4px;border-top:1px solid var(--line)}
+a{color:var(--accent)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header><h1>Le Protocole Publisher</h1><span id="who" class="creator"></span></header>
+<main>
+
+<div id="setup" class="card hidden">
+  <p>Enter the access key of this publishing tool.</p>
+  <label for="key">Access key</label><input id="key" type="password">
+  <label for="api">Server address <span class="small">(filled automatically)</span></label><input id="api" type="url">
+  <p><button class="primary" id="saveSetup">Save</button></p>
+</div>
+
+<div id="login" class="card hidden">
+  <p>Connect the TikTok account where the videos of <strong>Le Protocole</strong> are posted.</p>
+  <button class="primary" id="loginBtn">Continue with TikTok</button>
+</div>
+
+<div id="app" class="hidden">
+  <div class="grid">
+    <div class="card eps"><strong>Videos to post</strong><p class="small">Original math revision videos, best performing first.</p><div id="eps"></div></div>
+    <div class="card" id="editorCard">
+      <div id="empty" class="small">Select a video.</div>
+      <div id="editor" class="editor hidden">
+        <div><video id="preview" controls playsinline preload="metadata"></video><p class="small" id="dur"></p></div>
+        <div>
+          <div class="small">Posting to <strong id="postingTo"></strong></div>
+          <label for="title">Caption</label>
+          <textarea id="title" maxlength="2200"></textarea>
+          <div class="small"><span id="count">0</span> / 2200</div>
+
+          <label for="privacy">Who can view this video</label>
+          <select id="privacy"><option value="" selected disabled>Select…</option></select>
+
+          <label>Allow users to</label>
+          <div class="check"><input type="checkbox" id="c_comment"><label for="c_comment" style="margin:0;font-weight:400">Comment</label></div>
+          <div class="check"><input type="checkbox" id="c_duet"><label for="c_duet" style="margin:0;font-weight:400">Duet</label></div>
+          <div class="check"><input type="checkbox" id="c_stitch"><label for="c_stitch" style="margin:0;font-weight:400">Stitch</label></div>
+
+          <label>Content disclosure</label>
+          <div class="check"><input type="checkbox" id="disclose"><label for="disclose" style="margin:0;font-weight:400">This video promotes a brand, product or service</label></div>
+          <div id="discloseBox" class="hidden" style="padding-left:24px">
+            <div class="check"><input type="checkbox" id="b_own"><label for="b_own" style="margin:0;font-weight:400"><strong>Your brand</strong> — you are promoting yourself or your own business. The video will be labeled “Promotional content”.</label></div>
+            <div class="check"><input type="checkbox" id="b_paid"><label for="b_paid" style="margin:0;font-weight:400"><strong>Branded content</strong> — you are promoting another brand or a third party. The video will be labeled “Paid partnership”.</label></div>
+            <div id="discloseNote" class="small"></div>
+          </div>
+
+          <label for="when">When</label>
+          <select id="when"><option value="now">Post now</option><option value="later">Schedule</option></select>
+          <input id="at" type="datetime-local" class="hidden" style="margin-top:6px">
+
+          <p class="small" id="declaration"></p>
+          <button class="primary" id="publish" disabled>Post</button>
+          <div id="result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card"><strong>Scheduled and recent posts</strong><table id="jobs"></table></div>
+  <p class="small"><a href="terms.html">Terms of Service</a> · <a href="privacy.html">Privacy Policy</a> · <a href="#" id="logout">Disconnect TikTok</a> · <a href="#" id="reset">Change access key</a></p>
+</div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = {get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const LABELS = {PUBLIC_TO_EVERYONE:'Everyone', MUTUAL_FOLLOW_FRIENDS:'Friends', FOLLOWER_OF_CREATOR:'Followers', SELF_ONLY:'Only me'};
+let creator = null, eps = [], current = null;
+
+async function api(path, body){
+  const r = await fetch(store.get('api') + path, {method: body ? 'POST' : 'GET',
+    headers: {'X-Key': store.get('key'), 'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+  const d = await r.json();
+  if (!r.ok || d.error) throw new Error(d.error || r.status);
+  return d;
+}
+
+async function findServer(){
+  if (store.get('api')) return;
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/LeBabio/joseph-miniatures/main/tiktok/backend.json?t=' + Date.now());
+    store.set('api', (await r.json()).url);
+  } catch(e) {}
+}
+
+function show(id){ for (const s of ['setup','login','app']) $(s).classList.toggle('hidden', s !== id) }
+
+async function start(){
+  await findServer();
+  $('api').value = store.get('api');
+  if (!store.get('key') || !store.get('api')) return show('setup');
+  try { creator = await api('/api/creator') } catch(e) {
+    // le tunnel change d'adresse à chaque redémarrage : on relit backend.json une fois
+    if (!start.retried) { start.retried = true; store.set('api', ''); return start() }
+    show('setup'); $('setup').insertAdjacentHTML('beforeend', `<div class="msg err">${e.message}</div>`); return;
+  }
+  if (!creator.connected) return show('login');
+  $('who').innerHTML = `<img src="${creator.creator_avatar_url}" alt=""><span>${creator.creator_nickname}<br><span class="small">@${creator.creator_username}</span></span>`;
+  $('postingTo').textContent = `${creator.creator_nickname} (@${creator.creator_username})`;
+  show('app');
+  await loadEps(); await loadJobs();
+}
+
+async function loadEps(){
+  eps = await api('/api/episodes');
+  $('eps').innerHTML = '';
+  for (const e of eps){
+    const b = document.createElement('button');
+    b.textContent = e.ep + (e.scheduled ? '  ⏰' : '');
+    b.onclick = () => select(e, b);
+    $('eps').appendChild(b);
+  }
+  if (!eps.length) $('eps').innerHTML = '<p class="small">Everything is posted.</p>';
+}
+
+function select(e, btn){
+  current = e;
+  document.querySelectorAll('.eps button').forEach(x => x.classList.toggle('sel', x === btn));
+  $('empty').classList.add('hidden'); $('editor').classList.remove('hidden'); $('result').innerHTML = '';
+  $('preview').src = `${store.get('api')}/video/${e.ep}.mp4?k=${encodeURIComponent(store.get('key'))}`;
+  $('title').value = e.caption; $('count').textContent = e.caption.length;
+  const max = creator.max_video_post_duration_sec;
+  $('dur').innerHTML = `${e.duration} s` + (e.duration > max ? ` <span class="msg err">longer than the ${max} s allowed for this account</span>` : '');
+  $('privacy').innerHTML = '<option value="" selected disabled>Select…</option>' +
+    creator.privacy_level_options.map(p => `<option value="${p}">${LABELS[p] || p}</option>`).join('');
+  for (const [id, off] of [['c_comment', creator.comment_disabled], ['c_duet', creator.duet_disabled], ['c_stitch', creator.stitch_disabled]]){
+    $(id).checked = false; $(id).disabled = off;
+    $(id).nextElementSibling.title = off ? 'Disabled in your TikTok privacy settings' : '';
+  }
+  $('disclose').checked = $('b_own').checked = $('b_paid').checked = false;
+  $('when').value = 'now'; $('at').classList.add('hidden');
+  refresh();
+}
+
+function refresh(){
+  const on = $('disclose').checked, own = $('b_own').checked, paid = $('b_paid').checked;
+  $('discloseBox').classList.toggle('hidden', !on);
+  const selfOnly = [...$('privacy').options].find(o => o.value === 'SELF_ONLY');
+  if (selfOnly){ selfOnly.disabled = paid; if (paid && $('privacy').value === 'SELF_ONLY') $('privacy').value = '' }
+  $('discloseNote').textContent = on && !own && !paid ? 'Choose at least one option to disclose this content.' :
+    paid ? 'Branded content cannot be private.' : '';
+  $('declaration').innerHTML = paid
+    ? 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank">Music Usage Confirmation</a>.'
+    : 'By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank">Music Usage Confirmation</a>.';
+  $('count').textContent = $('title').value.length;
+  const later = $('when').value === 'later';
+  $('at').classList.toggle('hidden', !later);
+  $('publish').textContent = later ? 'Schedule' : 'Post';
+  $('publish').disabled = !current || !$('privacy').value || (on && !own && !paid) ||
+    current.duration > creator.max_video_post_duration_sec || (later && !$('at').value);
+}
+for (const id of ['privacy','disclose','b_own','b_paid','when','at']) $(id).addEventListener('change', refresh);
+$('title').addEventListener('input', refresh);
+
+$('publish').onclick = async () => {
+  $('publish').disabled = true;
+  const later = $('when').value === 'later';
+  try {
+    await api('/api/publish', {ep: current.ep, title: $('title').value, privacy_level: $('privacy').value,
+      allow_comment: $('c_comment').checked, allow_duet: $('c_duet').checked, allow_stitch: $('c_stitch').checked,
+      brand_content: $('disclose').checked && $('b_paid').checked, brand_organic: $('disclose').checked && $('b_own').checked,
+      at: later ? new Date($('at').value).getTime() / 1000 : null});
+    $('result').innerHTML = later
+      ? `<div class="msg ok">Scheduled for ${new Date($('at').value).toLocaleString()}.</div>`
+      : '<div class="msg ok">Sent to TikTok. Your video is being processed and may take a few minutes to appear on your profile.</div>';
+    await loadJobs(); await loadEps();
+  } catch(e) { $('result').innerHTML = `<div class="msg err">${e.message}</div>`; refresh() }
+};
+
+async function loadJobs(){
+  const jobs = (await api('/api/jobs')).reverse();
+  const st = {scheduled:'⏰ scheduled', running:'⏳ posting…', done:'✅ posted', failed:'❌ failed', cancelled:'cancelled'};
+  $('jobs').innerHTML = jobs.map(j => `<tr><td>${j.ep}</td><td>${new Date(j.at * 1000).toLocaleString()}</td>
+    <td>${LABELS[j.post.privacy_level] || j.post.privacy_level}</td><td>${st[j.state] || j.state}${j.error ? `<div class="small">${j.error}</div>` : ''}</td>
+    <td>${j.state === 'scheduled' ? `<button data-id="${j.id}">Cancel</button>` : ''}</td></tr>`).join('') || '<tr><td class="small">Nothing yet.</td></tr>';
+  $('jobs').querySelectorAll('button').forEach(b => b.onclick = async () => { await api('/api/cancel', {id: b.dataset.id}); loadJobs(); loadEps() });
+  if (jobs.some(j => j.state === 'running')) setTimeout(() => { loadJobs(); loadEps() }, 8000);
+}
+
+$('loginBtn').onclick = async () => { location.href = (await api('/api/login_url')).url };
+$('saveSetup').onclick = () => { store.set('key', $('key').value.trim()); store.set('api', $('api').value.trim().replace(/\/$/, '')); location.reload() };
+$('logout').onclick = async ev => { ev.preventDefault(); if (confirm('Disconnect TikTok?')) { await api('/api/logout', {}); location.reload() } };
+$('reset').onclick = ev => { ev.preventDefault(); store.set('key', ''); location.reload() };
+start();
+</script>
+</body>
+</html>
