@@ -1,8 +1,13 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:0 auto;padding:24px 16px;line-height:1.6;color:#1d1d1f;background:#fff}h1{font-size:1.6em}h2{font-size:1.15em;margin-top:1.6em}code{background:#f2f2f2;padding:2px 6px;border-radius:4px;word-break:break-all}button{font-size:1em;padding:8px 16px;margin-top:8px}</style><title>Le Protocole Publisher – Authorization</title></head><body>
 <h1>Le Protocole Publisher</h1><div id="out">No authorization code in this page address.</div>
 <script>
-var p=new URLSearchParams(location.search),c=p.get('code'),e=p.get('error'),o=document.getElementById('out');
-if(c){o.innerHTML='<p>Authorization succeeded. Copy this code and paste it in the terminal:</p><p><code id="c"></code></p><button id="b">Copy</button><p>State: <code id="s"></code></p>';
+var p=new URLSearchParams(location.search),c=p.get('code'),e=p.get('error'),o=document.getElementById('out'),st=p.get('state')||'';
+function ls(k){try{return localStorage.getItem(k)||''}catch(x){return ''}}
+if(c&&st.indexOf('web-')===0){o.textContent='Connecting your TikTok account…';
+fetch(ls('api')+'/api/auth',{method:'POST',headers:{'X-Key':ls('key'),'Content-Type':'application/json'},body:JSON.stringify({code:c,state:st})})
+.then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);location.replace('app.html')})
+.catch(function(x){o.textContent='Connection failed: '+x.message})}
+else if(c){o.innerHTML='<p>Authorization succeeded. Copy this code and paste it in the terminal:</p><p><code id="c"></code></p><button id="b">Copy</button><p>State: <code id="s"></code></p>';
 document.getElementById('c').textContent=c;document.getElementById('s').textContent=p.get('state')||'';
 document.getElementById('b').onclick=function(){navigator.clipboard.writeText(c).then(function(){document.getElementById('b').textContent='Copied ✓'})}}
 else if(e){o.textContent='Authorization failed: '+e+' – '+(p.get('error_description')||'')}
